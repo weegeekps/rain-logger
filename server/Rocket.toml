@@ -1,3 +1,3 @@
 [development]
 address = "localhost"
-rain_logger_db = { url = "postgres://rain_logger_dev:rainlogger123@localhost/rain_logger" }
+databases = { rain_logger_db = { url = "postgres://rain_logger_dev:rainlogger123@localhost/rain_logger" } }
