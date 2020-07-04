@@ -1,0 +1,16 @@
+[package]
+name = "rain-logger-api"
+version = "0.1.0"
+authors = ["Adam N. Morris <adam@kernelpanicstudios.com>"]
+edition = "2018"
+
+[dependencies]
+rocket = "0.4.4"
+rocket_codegen = "0.4.4"
+diesel = { version = "1.4.4", features = ["postgres", "r2d2", "uuid"] } 
+uuid = "0.6.0"
+
+[dependencies.rocket_contrib]
+version = "0.4.4"
+default-features = false
+features = ["json", "diesel_postgres_pool", "serve"]
