@@ -1,7 +1,6 @@
 table! {
     api_tokens (id) {
         id -> Uuid,
-        token -> Text,
         force_invalid -> Bool,
         created_at -> Timestamptz,
         modified_at -> Timestamptz,

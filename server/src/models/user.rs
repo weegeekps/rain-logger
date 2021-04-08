@@ -6,8 +6,8 @@ use uuid::Uuid;
 use std::error::Error;
 use chrono::prelude::*;
 
+#[derive(Identifiable, AsChangeset, Queryable, Insertable)]
 #[table_name = "users"]
-#[derive(AsChangeset, Queryable, Insertable)]
 pub struct User {
     pub id: Uuid,
     pub name: String,
@@ -47,8 +47,8 @@ impl User {
     }
 }
 
-#[table_name = "users"]
 #[derive(AsChangeset)]
+#[table_name = "users"]
 pub struct UserUpdateSet {
     pub name: Option<String>,
     pub password: Option<String>,
