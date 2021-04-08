@@ -133,6 +133,8 @@ mod tests {
         let user = user_result.get(0).unwrap();
         ApiToken::invalidate_all_for_user(&connection, user).unwrap();
         let result = api_tokens::table.filter(api_tokens::user_id.eq(user_id)).load::<ApiToken>(&connection).unwrap();
-        result.into_iter().map(|t| assert_eq!(true, t.force_invalid));
+        for t in result.into_iter() {
+            assert_eq!(true, t.force_invalid);
+        }
     }
 }
