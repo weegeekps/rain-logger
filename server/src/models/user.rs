@@ -59,9 +59,9 @@ pub struct UserUpdateSet {
 impl UserUpdateSet {
     pub fn new(name: Option<String>, password: Option<String>, enabled: Option<bool>) -> UserUpdateSet {
         return UserUpdateSet {
-            name: name,
-            password: password,
-            enabled: enabled,
+            name,
+            password,
+            enabled,
             modified_at: Utc::now()
         };
     }
@@ -119,7 +119,7 @@ mod tests {
         let hash = hash("hunter2", DEFAULT_COST).unwrap();
         let id = Uuid::parse_str("88280065-d1da-4255-8e29-0a09da2da88a").unwrap();
         let user = User {
-            id: id,
+            id,
             name: "testuser".to_string(),
             password: hash,
             enabled: true,
