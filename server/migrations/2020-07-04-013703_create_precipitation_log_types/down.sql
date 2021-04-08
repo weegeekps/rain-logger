@@ -1,1 +1,1 @@
--- This file should undo anything in `up.sql`
+DROP TABLE precipitation_log_types
