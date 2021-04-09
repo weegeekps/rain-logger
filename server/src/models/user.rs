@@ -1,10 +1,14 @@
-use crate::schema::users;
+use std::error::Error;
+
+use bcrypt::verify;
+use chrono::prelude::*;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use log::debug;
 use uuid::Uuid;
-use std::error::Error;
-use chrono::prelude::*;
+
+use crate::schema::users;
 
 #[derive(Identifiable, AsChangeset, Queryable, Insertable)]
 #[table_name = "users"]
@@ -24,6 +28,20 @@ impl User {
             .execute(conn)?;
 
         Ok(users::table.filter(users::id.eq(user.id)).first(conn)?)
+    }
+
+    pub fn validate(conn: &PgConnection, username: String, password: String) -> Result<User, Box<dyn Error>> {
+        let user = users::table
+            .filter(
+                users::name.eq(username)
+            ).first::<User>(conn)? as User;
+        match verify(password, user.password.as_str()) {
+            Ok(_) => Ok(user),
+            Err(err) => {
+                debug!("{}", err.to_string());
+                Err(err.into())
+            }
+        }
     }
 
     pub fn read_all(conn: &PgConnection) -> Result<Vec<User>, Box<dyn Error>> {
@@ -53,7 +71,7 @@ pub struct UserUpdateSet {
     pub name: Option<String>,
     pub password: Option<String>,
     pub enabled: Option<bool>,
-    pub modified_at: DateTime<Utc>
+    pub modified_at: DateTime<Utc>,
 }
 
 impl UserUpdateSet {
@@ -62,7 +80,7 @@ impl UserUpdateSet {
             name,
             password,
             enabled,
-            modified_at: Utc::now()
+            modified_at: Utc::now(),
         };
     }
 }
@@ -83,18 +101,20 @@ impl UserJson {
             name: user.name.to_owned(),
             enabled: user.enabled,
             created_at: user.created_at.clone(),
-            modified_at: user.modified_at.clone()
+            modified_at: user.modified_at.clone(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use bcrypt::{DEFAULT_COST, hash};
-    use dotenv::dotenv;
     use std::env;
     use std::sync::Once;
+
+    use bcrypt::{DEFAULT_COST, hash};
+    use dotenv::dotenv;
+
+    use super::*;
 
     static INIT: Once = Once::new();
 
@@ -124,7 +144,7 @@ mod tests {
             password: hash,
             enabled: true,
             created_at: Utc::now(),
-            modified_at: Utc::now()
+            modified_at: Utc::now(),
         };
         User::create(&connection, user).expect("Failed to create user.");
         let expected_name = vec!["testuser".to_string()];
@@ -142,7 +162,7 @@ mod tests {
         let update_user = UserUpdateSet::new(
             Some("testuser2".to_string()),
             None,
-            None
+            None,
         );
         User::update(&connection, id, update_user).unwrap();
         let result = User::read(&connection, id).unwrap();

@@ -1,11 +1,13 @@
-use crate::schema::api_tokens;
-use crate::models::user::User;
+use std::error::Error;
+
+use chrono::prelude::*;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use uuid::Uuid;
-use chrono::prelude::*;
-use std::error::Error;
+
+use crate::models::user::User;
+use crate::schema::api_tokens;
 
 #[derive(Identifiable, Associations, AsChangeset, Queryable, Insertable)]
 #[belongs_to(User)]
@@ -25,6 +27,17 @@ impl ApiToken {
             .execute(conn)?;
 
         Ok(api_tokens::table.filter(api_tokens::id.eq(token.id)).first(conn)?)
+    }
+
+    pub fn create_for_user(conn: &PgConnection, user: User) -> Result<ApiToken, Box<dyn Error>> {
+        let token = ApiToken {
+            id: Uuid::new_v4(),
+            force_invalid: false,
+            created_at: Utc::now(),
+            modified_at: Utc::now(),
+            user_id: user.id
+        };
+        ApiToken::create(conn, token)
     }
 
     pub fn invalidate(conn: &PgConnection, id: Uuid) -> Result<(), Box<dyn Error>> {
@@ -65,11 +78,14 @@ pub struct ApiTokenUpdateSet {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use dotenv::dotenv;
     use std::env;
     use std::sync::Once;
+
+    use dotenv::dotenv;
+
     use crate::models::user::User;
+
+    use super::*;
 
     static INIT: Once = Once::new();
 

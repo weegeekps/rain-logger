@@ -2,7 +2,7 @@
 CREATE TABLE users
 (
     id          uuid                     not null primary key,
-    name        varchar                  not null,
+    name        varchar                  not null unique,
     password    varchar                  not null,
     enabled     boolean                  not null default true,
     created_at  timestamp with time zone not null default current_timestamp,
