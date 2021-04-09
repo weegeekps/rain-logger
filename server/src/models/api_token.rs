@@ -40,6 +40,10 @@ impl ApiToken {
         ApiToken::create(conn, token)
     }
 
+    pub fn get(conn: &PgConnection, id: Uuid) -> Result<ApiToken, Box<dyn Error>> {
+        Ok(api_tokens::table.find(id).first(conn)?)
+    }
+
     pub fn invalidate(conn: &PgConnection, id: Uuid) -> Result<(), Box<dyn Error>> {
         let update_set = ApiTokenUpdateSet {
             force_invalid: true,

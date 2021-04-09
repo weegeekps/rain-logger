@@ -8,8 +8,6 @@ use crate::models::api_token::ApiToken;
 use crate::models::user::User;
 use crate::utils::jwt::generate_jwt;
 
-pub struct ApiKey(pub String);
-
 #[derive(Deserialize)]
 pub struct LoginRequest {
     name: String,

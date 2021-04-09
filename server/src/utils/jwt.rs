@@ -2,7 +2,7 @@ use std::env;
 use std::error::Error;
 
 use chrono::{DateTime, Timelike, Utc};
-use jsonwebtoken::{EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 
 use crate::models::api_token::ApiToken;
@@ -38,10 +38,23 @@ pub fn generate_jwt(api_token: ApiToken) -> Result<String, Box<dyn Error>> {
     let jwt = jsonwebtoken::encode(
         &Header::default(),
         &claims,
-        &EncodingKey::from_secret(secret.as_ref())
+        &EncodingKey::from_secret(secret.as_ref()),
     )?;
 
     Ok(jwt)
+}
+
+pub fn read_jwt(encoded_jwt: &str) -> Result<String, Box<dyn Error>> {
+    // Yes, we want a fatal error here. We are DoA if JWT_SECRET is not set.
+    let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set!");
+
+    let jwt = jsonwebtoken::decode::<Claims>(
+        encoded_jwt,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &Validation::default()
+    )?;
+
+    Ok(jwt.claims.sub)
 }
 
 // Taken from https://github.com/Keats/jsonwebtoken/blob/master/examples/custom_chrono.rs
