@@ -24,6 +24,7 @@ table! {
         measurement -> Numeric,
         logged_at -> Timestamptz,
         notes -> Nullable<Text>,
+        anomaly -> Bool,
         deleted -> Bool,
         created_at -> Timestamptz,
         modified_at -> Timestamptz,
