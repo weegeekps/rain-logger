@@ -38,6 +38,7 @@ fn main() {
         .mount("/api", routes![
             health_check,
             routes::auth::login,
+            routes::auth::logout,
             routes::user::get_all_users,
             routes::user::get_user
         ])

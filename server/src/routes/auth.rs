@@ -7,6 +7,7 @@ use crate::DbConn;
 use crate::models::api_token::ApiToken;
 use crate::models::user::User;
 use crate::utils::jwt::generate_jwt;
+use crate::models::auth::Auth;
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -51,6 +52,13 @@ pub fn login(conn: DbConn, payload: Json<LoginRequest>) -> Result<Json<LoginResp
     }
 }
 
-pub fn logout() {
-    todo!("Implement logout")
+#[get("/auth/logout")]
+pub fn logout(conn: DbConn, auth: &Auth) -> Status {
+    match ApiToken::invalidate(&conn as &PgConnection, auth.api_token.id) {
+        Ok(_) => Status::Ok,
+        Err(err) => {
+            error!("{}", err.to_string());
+            Status::InternalServerError
+        }
+    }
 }

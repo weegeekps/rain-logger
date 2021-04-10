@@ -5,16 +5,10 @@ use chrono::prelude::*;
 use diesel;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use log::{debug, error};
+use log::debug;
 use uuid::Uuid;
 
 use crate::schema::users;
-use rocket::request::{FromRequest, Outcome};
-use rocket::Request;
-use crate::utils::jwt::read_jwt;
-use crate::models::api_token::ApiToken;
-use crate::DbConn;
-use rocket::http::Status;
 
 #[derive(Identifiable, AsChangeset, Queryable, Insertable, Clone)]
 #[table_name = "users"]
@@ -25,45 +19,6 @@ pub struct User {
     pub enabled: bool,
     pub created_at: DateTime<Utc>,
     pub modified_at: DateTime<Utc>,
-}
-
-impl<'a, 'r> FromRequest<'a, 'r> for User {
-    type Error = ();
-
-    fn from_request(request: &'a Request<'r>) -> Outcome<User, ()> {
-        let conn: DbConn = request.guard::<DbConn>()?;
-
-        let headers = request.headers();
-        let jwts: Vec<_> = headers.get("Authorization").collect();
-        if jwts.len() != 1 {
-            return Outcome::Failure((Status::Unauthorized, ()));
-        }
-
-        let token_id = match read_jwt(&jwts[0][7..]) {
-            Ok(t) => Uuid::parse_str(t.as_str()).unwrap(),
-            Err(err) => {
-                debug!("{}", err.to_string());
-                return Outcome::Failure((Status::Unauthorized, ()));
-            }
-        };
-
-        let api_token = match ApiToken::get(&conn as &PgConnection, token_id) {
-            Ok(t) => t,
-            Err(_) => return Outcome::Failure((Status::Unauthorized, ())),
-        };
-
-        match User::read(&conn as &PgConnection, api_token.user_id) {
-            Ok(results) => {
-                if results.len() == 1 {
-                    let user = results.get(0).unwrap();
-                    Outcome::Success(user.clone())
-                } else {
-                    Outcome::Failure((Status::Unauthorized, ()))
-                }
-            }
-            Err(_) => Outcome::Failure((Status::Unauthorized, ())),
-        }
-    }
 }
 
 impl User {
