@@ -22,7 +22,7 @@ pub struct User {
 }
 
 impl User {
-    pub fn create(conn: &PgConnection, user: User) -> Result<User, Box<dyn Error>> {
+    pub fn create(conn: &PgConnection, user: Self) -> Result<Self, Box<dyn Error>> {
         diesel::insert_into(users::table)
             .values(&user)
             .execute(conn)?;
@@ -30,7 +30,7 @@ impl User {
         Ok(users::table.filter(users::id.eq(user.id)).first(conn)?)
     }
 
-    pub fn validate(conn: &PgConnection, username: String, password: String) -> Result<User, Box<dyn Error>> {
+    pub fn validate(conn: &PgConnection, username: String, password: String) -> Result<Self, Box<dyn Error>> {
         let user: User = users::table
             .filter(
                 users::name.eq(username)
@@ -44,11 +44,11 @@ impl User {
         }
     }
 
-    pub fn read_all(conn: &PgConnection) -> Result<Vec<User>, Box<dyn Error>> {
+    pub fn read_all(conn: &PgConnection) -> Result<Vec<Self>, Box<dyn Error>> {
         Ok(users::table.load::<User>(conn)?)
     }
 
-    pub fn read(conn: &PgConnection, id: Uuid) -> Result<Vec<User>, Box<dyn Error>> {
+    pub fn read(conn: &PgConnection, id: Uuid) -> Result<Vec<Self>, Box<dyn Error>> {
         // todo!("Fix this so it properly returns only 1 user.")
         Ok(users::table.filter(users::id.eq(id)).load(conn)?)
     }

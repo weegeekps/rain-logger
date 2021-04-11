@@ -9,26 +9,16 @@ table! {
 }
 
 table! {
-    precipitation_log_types (id) {
-        id -> Uuid,
-        #[sql_name = "type"]
-        type_ -> Int4,
-        created_at -> Timestamptz,
-        modified_at -> Timestamptz,
-    }
-}
-
-table! {
     precipitation_logs (id) {
         id -> Uuid,
-        measurement -> Numeric,
+        measurement -> Float4,
         logged_at -> Timestamptz,
         notes -> Nullable<Text>,
+        ptype -> Int2,
         anomaly -> Bool,
         deleted -> Bool,
         created_at -> Timestamptz,
         modified_at -> Timestamptz,
-        type_id -> Uuid,
     }
 }
 
@@ -44,11 +34,9 @@ table! {
 }
 
 joinable!(api_tokens -> users (user_id));
-joinable!(precipitation_logs -> precipitation_log_types (type_id));
 
 allow_tables_to_appear_in_same_query!(
     api_tokens,
-    precipitation_log_types,
     precipitation_logs,
     users,
 );

@@ -1,1 +1,1 @@
-DROP TABLE precipitation_logs
+DROP TABLE precipitation_logs;

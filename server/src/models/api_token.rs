@@ -21,7 +21,7 @@ pub struct ApiToken {
 }
 
 impl ApiToken {
-    pub fn create(conn: &PgConnection, token: ApiToken) -> Result<ApiToken, Box<dyn Error>> {
+    pub fn create(conn: &PgConnection, token: Self) -> Result<ApiToken, Box<dyn Error>> {
         diesel::insert_into(api_tokens::table)
             .values(&token)
             .execute(conn)?;

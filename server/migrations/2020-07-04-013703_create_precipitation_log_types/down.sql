@@ -1,1 +1,0 @@
-DROP TABLE precipitation_log_types

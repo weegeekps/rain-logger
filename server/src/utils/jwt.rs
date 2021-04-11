@@ -2,7 +2,7 @@ use std::env;
 use std::error::Error;
 
 use chrono::{DateTime, Timelike, Utc};
-use jsonwebtoken::{EncodingKey, Header, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 
 use crate::models::api_token::ApiToken;
@@ -51,7 +51,7 @@ pub fn read_jwt(encoded_jwt: &str) -> Result<String, Box<dyn Error>> {
     let jwt = jsonwebtoken::decode::<Claims>(
         encoded_jwt,
         &DecodingKey::from_secret(secret.as_ref()),
-        &Validation::default()
+        &Validation::default(),
     )?;
 
     Ok(jwt.claims.sub)
@@ -84,15 +84,30 @@ mod jwt_numeric_date {
 
     #[cfg(test)]
     mod tests {
+        use std::env;
+        use std::sync::Once;
+
         use chrono::{Duration, TimeZone, Utc};
+        use dotenv::dotenv;
         use jsonwebtoken::{decode, DecodingKey, encode, EncodingKey, Header, Validation};
 
-        use super::super::{Claims, SECRET};
+        use super::super::Claims;
 
         const EXPECTED_TOKEN: &str = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjMyNTAzNjgwMDAwfQ.RTgha0S53MjPC2pMA4e2oMzaBxSY3DMjiYR2qFfV55A";
 
+        static INIT: Once = Once::new();
+
+        fn initialize() {
+            INIT.call_once(|| {
+                dotenv().ok();
+            });
+        }
+
         #[test]
         fn round_trip() {
+            initialize();
+            let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
             let sub = "Custom DateTime ser/de".to_string();
             let iat = Utc.timestamp(0, 0);
             let exp = Utc.timestamp(32503680000, 0);
@@ -100,14 +115,14 @@ mod jwt_numeric_date {
             let claims = Claims::new(sub.clone(), iat, exp);
 
             let token =
-                encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
+                encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref()))
                     .expect("Failed to encode claims");
 
             assert_eq!(&token, EXPECTED_TOKEN);
 
             let decoded = decode::<Claims>(
                 &token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(secret.as_ref()),
                 &Validation::default(),
             )
                 .expect("Failed to decode token");
@@ -117,12 +132,15 @@ mod jwt_numeric_date {
 
         #[test]
         fn should_fail_on_invalid_timestamp() {
+            initialize();
+            let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
             // A token with the expiry of i64::MAX + 1
             let overflow_token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJDdXN0b20gRGF0ZVRpbWUgc2VyL2RlIiwiaWF0IjowLCJleHAiOjkyMjMzNzIwMzY4NTQ3NzYwMDB9.G2PKreA27U8_xOwuIeCYXacFYeR46f9FyENIZfCrvEc";
 
             let decode_result = decode::<Claims>(
                 &overflow_token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(secret.as_ref()),
                 &Validation::default(),
             );
 
@@ -131,6 +149,9 @@ mod jwt_numeric_date {
 
         #[test]
         fn to_token_and_parse_equals_identity() {
+            initialize();
+            let secret = env::var("JWT_SECRET").expect("JWT_SECRET must be set");
+
             let iat = Utc::now();
             let exp = iat + Duration::days(1);
             let sub = "Custom DateTime ser/de".to_string();
@@ -138,12 +159,12 @@ mod jwt_numeric_date {
             let claims = Claims::new(sub.clone(), iat, exp);
 
             let token =
-                encode(&Header::default(), &claims, &EncodingKey::from_secret(SECRET.as_ref()))
+                encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_ref()))
                     .expect("Failed to encode claims");
 
             let decoded = decode::<Claims>(
                 &token,
-                &DecodingKey::from_secret(SECRET.as_ref()),
+                &DecodingKey::from_secret(secret.as_ref()),
                 &Validation::default(),
             )
                 .expect("Failed to decode token")
