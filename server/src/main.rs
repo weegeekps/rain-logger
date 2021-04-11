@@ -40,7 +40,12 @@ fn main() {
             routes::auth::login,
             routes::auth::logout,
             routes::user::get_all_users,
-            routes::user::get_user
+            routes::user::get_user,
+            routes::log::get_all_entries,
+            routes::log::get_entry,
+            routes::log::create_entry,
+            routes::log::update_entry,
+            routes::log::delete_entry,
         ])
         .launch();
 }

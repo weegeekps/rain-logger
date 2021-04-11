@@ -16,7 +16,7 @@ pub enum PrecipitationType {
     Frozen = 3,
 }
 
-#[derive(Identifiable, AsChangeset, Queryable, Insertable, Clone)]
+#[derive(Serialize, Deserialize, Identifiable, AsChangeset, Queryable, Insertable, Clone)]
 #[table_name = "precipitation_logs"]
 pub struct PrecipitationLog {
     pub id: Uuid,
@@ -52,25 +52,58 @@ impl PrecipitationLog {
             .values(entry)
             .execute(conn)?;
 
-        Ok(precipitation_logs::table.filter(precipitation_logs::id.eq(entry.id)).first(conn)?)
+        Ok(precipitation_logs::table
+            .filter(precipitation_logs::id.eq(entry.id))
+            .first(conn)?
+        )
     }
 
     pub fn read_all(conn: &PgConnection) -> Result<Vec<Self>, Box<dyn Error>> {
-        Ok(precipitation_logs::table.load::<PrecipitationLog>(conn)?)
+        Ok(precipitation_logs::table
+            .filter(precipitation_logs::deleted.eq(false))
+            .load::<PrecipitationLog>(conn)?
+        )
     }
 
-    pub fn read(conn: &PgConnection, id: Uuid) -> Result<Self, Box<dyn Error>> {
-        Ok(precipitation_logs::table.find(id).first(conn)?)
+    pub fn read(conn: &PgConnection, id: Uuid) -> Result<Option<Self>, Box<dyn Error>> {
+        let result: Vec<PrecipitationLog> = precipitation_logs::table
+            .filter(precipitation_logs::id.eq(id))
+            .load::<PrecipitationLog>(conn)?;
+
+        if result.len() == 1 {
+            Ok(Some(result[0].clone()))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn update(conn: &PgConnection, entry: &Self) -> Result<Self, Box<dyn Error>> {
-        diesel::update(precipitation_logs::table).set(entry).filter(precipitation_logs::id.eq(entry.id)).execute(conn)?;
+        diesel::update(precipitation_logs::table)
+            .set(entry)
+            .filter(precipitation_logs::id.eq(entry.id))
+            .execute(conn)?;
 
-        Ok(PrecipitationLog::read(conn, entry.id)?)
+        let result = PrecipitationLog::read(conn, entry.id)?;
+
+        match result {
+            Some(e) => Ok(e),
+            None => Err(Box::new(diesel::NotFound))
+        }
+    }
+
+    pub fn soft_delete(conn: &PgConnection, id: Uuid) -> Result<(), Box<dyn Error>> {
+        diesel::update(precipitation_logs::table)
+            .set(precipitation_logs::deleted.eq(true))
+            .filter(precipitation_logs::id.eq(id))
+            .execute(conn)?;
+
+        Ok(())
     }
 
     pub fn delete(conn: &PgConnection, id: Uuid) -> Result<(), Box<dyn Error>> {
-        diesel::delete(precipitation_logs::table).filter(precipitation_logs::id.eq(id)).execute(conn)?;
+        diesel::delete(precipitation_logs::table)
+            .filter(precipitation_logs::id.eq(id))
+            .execute(conn)?;
 
         Ok(())
     }
@@ -121,7 +154,7 @@ mod tests {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
         let connection = PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
         let id = Uuid::parse_str("f76f799b-c7be-4553-a48d-8c282df7cc9c").expect("Failed to parse ID");
-        let mut entry = PrecipitationLog::read(&connection, id).expect("Failed to fetch entry.");
+        let mut entry = PrecipitationLog::read(&connection, id).expect("Failed to fetch entry.").unwrap();
         let expected_measurement = 10.0;
         let expected_notes = Some("I have changed the notes.".to_string());
         entry.measurement = expected_measurement;
@@ -129,6 +162,19 @@ mod tests {
         let result = PrecipitationLog::update(&connection, &entry).expect("Failed to update entry.");
         assert_eq!(expected_measurement, result.measurement);
         assert_eq!(expected_notes.unwrap(), entry.notes.expect("Result notes unset."));
+    }
+
+    #[test]
+    #[ignore]
+    fn soft_delete_precipitation_log_entry() {
+        initialize();
+        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
+        let connection = PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url));
+        let id = Uuid::parse_str("5994b445-a8d8-4918-a1ca-00d09299688f").expect("Failed to parse ID");
+        let before_result = PrecipitationLog::read_all(&connection).expect("Failed to read all.");
+        PrecipitationLog::soft_delete(&connection, id).expect("Failed to delete entry.");
+        let after_result = PrecipitationLog::read_all(&connection).expect("Failed to read all.");
+        assert_eq!(before_result.len() - 1, after_result.len());
     }
 
     #[test]
