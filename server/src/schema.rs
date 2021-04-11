@@ -12,7 +12,7 @@ table! {
     precipitation_log_types (id) {
         id -> Uuid,
         #[sql_name = "type"]
-        type_ -> Varchar,
+        type_ -> Int4,
         created_at -> Timestamptz,
         modified_at -> Timestamptz,
     }
