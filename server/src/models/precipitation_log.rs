@@ -8,12 +8,24 @@ use uuid::Uuid;
 
 use crate::schema::precipitation_logs;
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub enum PrecipitationType {
     Unidentified = 0,
     Liquid = 1,
     Freezing = 2,
     Frozen = 3,
+}
+
+impl PrecipitationType {
+    // So dumb that casting enums still isn't a thing without a crate or code like this.
+    pub fn from_i16(value: i16) -> Self {
+        match value {
+            1 => PrecipitationType::Liquid,
+            2 => PrecipitationType::Freezing,
+            3 => PrecipitationType::Frozen,
+            _ => PrecipitationType::Unidentified,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Identifiable, AsChangeset, Queryable, Insertable, Clone)]
@@ -25,6 +37,8 @@ pub struct PrecipitationLog {
     pub notes: Option<String>,
     pub ptype: i16,
     pub anomaly: bool,
+
+    #[serde(skip_serializing, skip_deserializing)]
     pub deleted: bool,
     pub created_at: DateTime<Utc>,
     pub modified_at: DateTime<Utc>,
@@ -43,6 +57,20 @@ impl PrecipitationLog {
             anomaly,
             deleted: false,
             created_at: Utc::now(),
+            modified_at: Utc::now(),
+        }
+    }
+
+    fn new_for_upsert(db_entry: &Self, user_entry: &Self) -> Self {
+        Self {
+            id: db_entry.id.clone(),
+            measurement: user_entry.measurement,
+            logged_at: user_entry.logged_at,
+            notes: user_entry.notes.to_owned(),
+            ptype: user_entry.ptype,
+            anomaly: user_entry.anomaly,
+            deleted: false,
+            created_at: db_entry.created_at,
             modified_at: Utc::now(),
         }
     }
@@ -74,6 +102,25 @@ impl PrecipitationLog {
             Ok(Some(result[0].clone()))
         } else {
             Ok(None)
+        }
+    }
+
+    pub fn upsert(conn: &PgConnection, user_entry: &Self) -> Result<Self, Box<dyn Error>> {
+        match PrecipitationLog::read(conn, user_entry.id)? {
+            Some(db_entry) => {
+                let entry = PrecipitationLog::new_for_upsert(&db_entry, user_entry);
+                PrecipitationLog::update(conn, &entry)
+            }
+            None => {
+                let entry = PrecipitationLog::new(
+                    user_entry.measurement,
+                    user_entry.logged_at,
+                    PrecipitationType::from_i16(user_entry.ptype),
+                    user_entry.notes.to_owned(),
+                    user_entry.anomaly,
+                );
+                PrecipitationLog::create(conn, &entry)
+            }
         }
     }
 
@@ -125,6 +172,12 @@ mod tests {
             dotenv().ok();
         });
     }
+
+    /*
+     * These really are integration tests, not unit tests. I've marked them all
+     * ignored as they shouldn't be called during the normal test runs, and only
+     * are useful for working on the database.
+     */
 
     #[test]
     #[ignore]
